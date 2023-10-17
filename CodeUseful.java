@@ -1,3 +1,5 @@
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Scanner;
 
 public class CodeUseful {
@@ -227,21 +229,87 @@ public class CodeUseful {
       String thisNum = this.number;
       String inputNum = input.number;
 
-
       if (debug == 1) {
         System.out.print("  " + this + " divide(): " + input);
       }
 
       int newPower = this.power - input.power;
-      int newNumber = Integer.parseInt(thisNum) / Integer.parseInt(inputNum);
+      String newNumber = "";
 
-      this.number = Integer.toString(newNumber);
+      // If the divisor is zero, return 0
+      if (inputNum.equals("0")) {
+        return new Decimal("0");
+      }
+
+      // If the dividend is zero, return zero
+      if (thisNum.equals("0")) {
+        return new Decimal("0");
+      }
+
+      // If the divisor is greater than the dividend, return zero
+      if (thisNum.compareTo(inputNum) < 0) {
+        return new Decimal("0");
+      }
+
+      // Remove trailing zeros from dividend and divisor
+      thisNum = thisNum.replaceAll("0*$", "");
+      inputNum = inputNum.replaceAll("0*$", "");
+
+      // If the divisor is equal to the dividend, return one
+      if (thisNum.equals(inputNum)) {
+        return new Decimal("1");
+      }
+
+      // Initialize variables for long division
+      StringBuilder quotient = new StringBuilder();
+      StringBuilder remainder = new StringBuilder(thisNum.substring(0, inputNum.length()));
+      int i = inputNum.length();
+
+      // Perform long division
+      while (i <= thisNum.length()) {
+        int count = 0;
+        while (remainder.toString().compareTo(inputNum) >= 0) {
+          remainder = new StringBuilder(subtractStrings(remainder.toString(), inputNum));
+          count++;
+        }
+        quotient.append(count);
+        if (i == thisNum.length()) {
+          break;
+        }
+        remainder.append(thisNum.charAt(i));
+        i++;
+      }
+
+      // Add trailing zeros to quotient if necessary
+      if (newPower > 0) {
+        quotient.append("0".repeat(newPower));
+      }
+
+      this.number = quotient.toString();
       this.power = newPower;
+
 
       if (debug == 1) {
         System.out.println(" = " + this);
       }
-      return this; // TODO add trailing zeros
+      return this;
+    }
+
+    private String subtractStrings(String num1, String num2) {
+      StringBuilder result = new StringBuilder();
+      int carry = 0;
+      int i = num1.length() - 1;
+      int j = num2.length() - 1;
+      while (i >= 0 || j >= 0) {
+        int digit1 = i >= 0 ? Integer.parseInt(num1.substring(i, i + 1)) : 0;
+        int digit2 = j >= 0 ? Integer.parseInt(num2.substring(j, j + 1)) : 0;
+        int diff = digit1 - digit2 - carry;
+        carry = diff < 0 ? 1 : 0;
+        result.insert(0, (diff + 10) % 10);
+        i--;
+        j--;
+      }
+      return result.toString().replaceAll("^0+", "");
     }
 
     public Decimal debugMode() {
@@ -269,12 +337,14 @@ public class CodeUseful {
   public static void main(String[] args) {
     Scanner scanner = new Scanner(System.in);
     System.out.print("Enter a number: ");
-    Decimal myNumber = Decimal(scanner.nextLine()).debugMode(0);
+    Decimal myNumber = Decimal(scanner.nextLine()).debugMode(1);
     System.out.print("Enter number to add: ");
-    myNumber.add(Decimal(scanner.nextLine()));
-    // myNumber.multiply(Decimal("2.5"));
-    // myNumber.divide(Decimal("2.5"));
-    // myNumber.divide(Decimal("2.405"));
+    // myNumber.add(Decimal(scanner.nextLine()));
+    myNumber.multiply(Decimal("2"));
+    myNumber.multiply(Decimal("2.5"));
+    myNumber.divide(Decimal("2"));
+    myNumber.multiply(Decimal("10"));
+    myNumber.divide(Decimal("2.5"));
     System.out.println("Final: " + myNumber);
 
 
