@@ -1,6 +1,3 @@
-
-// import java.util.Map;
-// import java.util.HashMap;
 import java.util.Scanner;
 
 public class CodeUseful {
@@ -26,16 +23,20 @@ public class CodeUseful {
 		 */
 		int power;
 
+		boolean isPositive;
+
 		int debug = 0;
 
 		Decimal() {
 			this.number = "0";
 			this.power = 0;
+			this.isPositive = true;
 		}
 
 		Decimal(int whole) {
 			this.number = Integer.toString(whole);
 			this.power = 0;
+			this.isPositive = whole >= 0;
 		}
 
 		Decimal(double input) {
@@ -44,17 +45,32 @@ public class CodeUseful {
 				input *= 10;
 			}
 			this.number = Double.toString(input);
+			this.isPositive = input >= 0;
 		}
 
 		Decimal(String input) {
 			this.power = findPower(input);
-			this.number = input.replace(".", "");
+			this.number = input.replace(".", "").replace("-", "");
+			this.isPositive = input.charAt(0) != '-';
 		}
 
 		// ============================ //
 
 		/** Adds the input to self */
 		public Decimal add(Decimal input) {
+			if (input.number.equals("0")) {
+				return this;
+			}
+			if (this.isPositive != input.isPositive) {
+				if (this.isPositive) {
+					input.isPositive = true;
+					return this.subtract(input);
+				} else {
+					this.isPositive = true;
+					return input.subtract(this);
+				}
+			}
+
 			String[] leveled = levelDecimals(input);
 			if (debug >= 1) {
 				System.out.print("  " + this + " add(): " + input);
@@ -72,14 +88,27 @@ public class CodeUseful {
 
 		/** Subtracts the input from self */
 		public Decimal subtract(Decimal input) {
+			if (input.number.equals("0")) {
+				return this;
+			}
+			if (this.isPositive != input.isPositive) {
+				if (this.isPositive) {
+					input.isPositive = true;
+					return this.add(input);
+				} else {
+					this.isPositive = true;
+					return input.add(this);
+				}
+			}
 			String[] leveled = levelDecimals(input);
 			if (debug == 1) {
-				System.out.println("  " + this + " subtract(): " + input);
+				System.out.print("  " + this + " subtract(): " + input);
 			}
 
 			int carry = 0;
 			for (int i = leveled[0].length() - 1; i >= 0; i--) {
-				int sub = Integer.parseInt(leveled[0].substring(i, i + 1)) - Integer.parseInt(leveled[1].substring(i, i + 1))
+				int sub = Integer.parseInt(leveled[0].substring(i, i + 1))
+						- Integer.parseInt(leveled[1].substring(i, i + 1))
 						- carry;
 				if (sub < 0) {
 					sub += 10;
@@ -113,6 +142,7 @@ public class CodeUseful {
 				System.out.print("  " + this + " multiply(): " + input);
 			}
 
+			boolean newPositive = this.isPositive == input.isPositive;
 			int newPower = this.power + input.power;
 			String newNumber = "0";
 			int carry = 0;
@@ -137,6 +167,7 @@ public class CodeUseful {
 
 			this.number = newNumber;
 			this.power = newPower;
+			this.isPositive = newPositive;
 
 			if (debug == 1) {
 				System.out.println(" = " + this);
@@ -154,44 +185,77 @@ public class CodeUseful {
 				System.out.print("  " + this + " divide(): " + input);
 			}
 
+			boolean newPositive = this.isPositive == input.isPositive;
 			int newPower = this.power - input.power;
 			String newNumber = "";
 			boolean keepGoing = true;
-			String dividend = thisNum;
-			String remainder = "";
-			// dividend is the number that is being divided
+			String remainder = thisNum;
+			// remainder is the number that is being divided
 			// divisor is the number that is it dividing by
 
 			while (keepGoing) {
 				// Check if divisor is less than dividend
-				while (!isGreaterThan(dividend, divisor)) {
-					dividend += "0";
+				while (!isGreaterThan(remainder, divisor + "0")) {
+					remainder += "0";
 					newPower++;
 					// TODO check if it is too big
 				}
-				if (remainder == "0") {
+
+				String working = "0";
+				int count = 0;
+				while (!isGreaterThan(working, remainder)) {
+					working = addStrings(working, divisor);
+					count++;
+				}
+
+				remainder = new Decimal(remainder).subtract(new Decimal(working)).number; // subtracts working from remainder
+				newNumber += Integer.toString(count);
+
+				boolean allZeros = true;
+				for (int i = 0; i < remainder.length(); i++) {
+					if (remainder.charAt(i) != '0') {
+						allZeros = false;
+						break;
+					}
+				}
+				if (allZeros) {
 					break;
 				}
 			}
+
+			this.power = newPower;
+			this.number = newNumber;
+			this.isPositive = newPositive;
 
 			if (debug == 1) {
 				System.out.println(" = " + this);
 			}
 
-			this.power = newPower;
-			this.number = newNumber;
 			return this;
 		}
 
+		/** Is first number bigger than second */
 		private boolean isGreaterThan(String numOne, String numTwo) {
-			return true; // TODO
+			if (numOne.length() > numTwo.length()) {
+				return true;
+			} else if (numOne.length() < numTwo.length()) {
+				return false;
+			}
+			for (int i = 0; i < numOne.length(); i++) {
+				if (Integer.parseInt(numOne.substring(i, i + 1)) > Integer.parseInt(numTwo.substring(i, i + 1))) {
+					return true;
+				} else if (Integer.parseInt(numOne.substring(i, i + 1)) < Integer.parseInt(numTwo.substring(i, i + 1))) {
+					return false;
+				}
+			}
+			return true;
 		}
 
 		// Helper functions
 
 		private String[] levelDecimals(Decimal input) {
-			String strThis = this.toString();
-			String strInput = input.toString();
+			String strThis = this.toString().replace("-", "");
+			String strInput = input.toString().replace("-", "");
 
 			if (debug == 2) {
 				System.out.println("levelDecimals(): ");
@@ -211,8 +275,8 @@ public class CodeUseful {
 
 			int newPower = findPower(strThis);
 
-			strThis = strThis.replace(".", "");
-			strInput = strInput.replace(".", "");
+			strThis = strThis.replace(".", "").replace("-", "");
+			strInput = strInput.replace(".", "").replace("-", "");
 
 			if (debug == 2) {
 				System.out.println(" | end strThis: " + strThis);
@@ -225,16 +289,36 @@ public class CodeUseful {
 
 		@Override
 		public String toString() {
+			trim();
 			if (debug == 2) {
 				System.out.println("toString(): ");
 				System.out.println(" | power: " + power);
 				System.out.println(" | number: " + number);
 			}
 			if (power == 0) {
-				return number + ".0";
+				if (isPositive) {
+					return number;
+				} else {
+					return "-" + number;
+				}
 			} else {
-				return number.substring(0, number.length() - power) + "." + number.substring(number.length() - power);
+				if (isPositive) {
+					return number.substring(0, number.length() - power) + "." + number.substring(number.length() - power);
+				} else {
+					return "-" + number.substring(0, number.length() - power) + "." + number.substring(number.length() - power);
+				}
 			}
+		}
+
+		private Decimal trim() {
+			while (number.charAt(0) == '0') {
+				number = number.substring(1);
+			}
+			while (number.charAt(number.length() - 1) == '0' && power > 0) {
+				number = number.substring(0, number.length() - 1);
+				power--;
+			}
+			return this;
 		}
 
 		private int findPower(String input) {
@@ -245,6 +329,7 @@ public class CodeUseful {
 			return split[1].length();
 		}
 
+		/** Adds the strings as if they were numbers */
 		private String addStrings(String num1, String num2) {
 			String result = "";
 			int carry = 0;
@@ -291,17 +376,24 @@ public class CodeUseful {
 
 	public static void main(String[] args) {
 		Scanner scanner = new Scanner(System.in);
-		System.out.print("Enter a number: ");
+		// System.out.print("Enter a number: ");
 		Decimal myNumber = Decimal(
 				// scanner.nextLine()
-				"12").debugMode(1);
+				"10").debugMode(1);
 		// System.out.print("Enter number to add: ");
 		// myNumber.add(Decimal(scanner.nextLine()));
-		myNumber.multiply(Decimal("2"));
+		myNumber.add(Decimal("10"));
+		// myNumber.add(Decimal("-1.5"));
+		myNumber.subtract(Decimal("12"));
+		// myNumber.subtract(Decimal("-1"));
+		// myNumber.multiply(Decimal("-2"));
 		myNumber.multiply(Decimal("2.5"));
-		myNumber.divide(Decimal("2"));
+		// myNumber.divide(Decimal("-2"));
 		myNumber.multiply(Decimal("10"));
 		myNumber.divide(Decimal("2.5"));
+		myNumber.divide(Decimal("12"));
+		myNumber.divide(Decimal("3"));
+		myNumber.multiply(Decimal("3"));
 		System.out.println("Final: " + myNumber);
 
 		scanner.close();
